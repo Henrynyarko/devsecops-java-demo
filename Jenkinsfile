@@ -87,7 +87,7 @@ pipeline {
             }
         }
 
-        stage('Deploy to Dev') {
+        stage('Deploy to Dev Environment') {
             steps {
                 echo "Deployment to Dev completed"
             }
