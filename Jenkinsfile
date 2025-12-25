@@ -32,11 +32,14 @@ pipeline {
                     steps {
                         container('maven') {
                             catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                                // Use withCredentials to properly inject NVD_API_KEY inside container
+                                // Properly inject NVD_API_KEY inside container
                                 withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
                                     sh '''
+                                        echo "Using NVD API Key: $NVD_API_KEY"
                                         mvn org.owasp:dependency-check-maven:check \
-                                        -Dnvd.api.key=$NVD_API_KEY
+                                          -Dnvd.api.key=$NVD_API_KEY \
+                                          -Dformat=HTML \
+                                          -DoutputDirectory=target
                                     '''
                                 }
                             }
@@ -88,6 +91,12 @@ pipeline {
             steps {
                 echo "Deployment to Dev completed"
             }
+        }
+    }
+
+    post {
+        always {
+            echo "Pipeline finished"
         }
     }
 }
