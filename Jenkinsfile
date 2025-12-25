@@ -1,9 +1,5 @@
-
 pipeline {
   agent {
-  environment {
-    NVD_API_KEY = credentials('nvd-api-key') // if stored in Jenkins credentials
-  }
     kubernetes {
       yamlFile 'build-agent.yaml'
       defaultContainer 'maven'
@@ -11,16 +7,16 @@ pipeline {
     }
   }
 
+  environment {
+    NVD_API_KEY = credentials('nvd-api-key')
+  }
+
   stages {
 
     stage('Build') {
-      parallel {
-        stage('Compile') {
-          steps {
-            container('maven') {
-              sh 'mvn compile'
-            }
-          }
+      steps {
+        container('maven') {
+          sh 'mvn compile'
         }
       }
     }
@@ -40,7 +36,10 @@ pipeline {
           steps {
             container('maven') {
               catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                sh 'mvn org.owasp:dependency-check-maven:check'
+                sh '''
+                  mvn org.owasp:dependency-check-maven:check \
+                  -Dnvd.api.key=$NVD_API_KEY
+                '''
               }
             }
           }
@@ -49,10 +48,8 @@ pipeline {
               archiveArtifacts(
                 allowEmptyArchive: true,
                 artifacts: 'target/dependency-check-report.html',
-                fingerprint: true,
-                onlyIfSuccessful: false
+                fingerprint: true
               )
-              // dependencyCheckPublisher pattern: 'report.xml'
             }
           }
         }
@@ -61,25 +58,26 @@ pipeline {
     }
 
     stage('Package') {
-      parallel {
-        stage('Create Jarfile') {
-          steps {
-            container('maven') {
-              sh 'mvn package -DskipTests'
-            }
-          }
+      steps {
+        container('maven') {
+          sh 'mvn package -DskipTests'
         }
       }
     }
 
     stage('Build Docker Image') {
-      agent { label 'kaniko' } // must match pod template label
+      agent {
+        kubernetes {
+          yamlFile 'build-agent.yaml'
+          defaultContainer 'kaniko'
+        }
+      }
       steps {
         container('kaniko') {
           sh '''
             /kaniko/executor \
-              -f `pwd`/Dockerfile \
-              -c `pwd` \
+              -f Dockerfile \
+              -c . \
               --destination=docker.io/ernest633/dso-demo:v1 \
               --cache=true \
               --skip-tls-verify
@@ -90,9 +88,8 @@ pipeline {
 
     stage('Deploy to Dev') {
       steps {
-        sh "echo done"
+        echo "done"
       }
     }
-
   }
 }
