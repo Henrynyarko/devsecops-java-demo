@@ -32,7 +32,7 @@ pipeline {
                     steps {
                         container('maven') {
                             catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                                // Properly inject NVD_API_KEY inside container
+                                // Inject NVD_API_KEY inside container
                                 withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
                                     sh '''
                                         echo "Using NVD API Key: $NVD_API_KEY"
@@ -66,6 +66,7 @@ pipeline {
             }
         }
 
+        /*
         stage('Build Docker Image') {
             agent {
                 kubernetes {
@@ -86,6 +87,7 @@ pipeline {
                 }
             }
         }
+        */
 
         stage('Deploy to Dev Environment') {
             steps {
