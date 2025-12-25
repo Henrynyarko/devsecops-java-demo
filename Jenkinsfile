@@ -1,4 +1,5 @@
 pipeline {
+  // Top-level agent for the default container (Maven)
   agent {
     kubernetes {
       yamlFile 'build-agent.yaml'
@@ -7,11 +8,20 @@ pipeline {
     }
   }
 
+  // Top-level environment variables
   environment {
-    NVD_API_KEY = credentials('nvd-api-key')
+    NVD_API_KEY = credentials('nvd-api-key')   // For OWASP Dependency Check
+    GITHUB_TOKEN = credentials('github-pat')  // Your GitHub PAT
   }
 
   stages {
+
+    stage('Checkout') {
+      steps {
+        // Checkout with GitHub PAT
+        git branch: 'main', url: 'https://github.com/Henrynyarko/devsecops-java-demo', credentialsId: 'github-pat'
+      }
+    }
 
     stage('Build') {
       steps {
@@ -66,6 +76,7 @@ pipeline {
     }
 
     stage('Build Docker Image') {
+      // Custom agent for Kaniko
       agent {
         kubernetes {
           yamlFile 'build-agent.yaml'
@@ -88,8 +99,18 @@ pipeline {
 
     stage('Deploy to Dev') {
       steps {
-        echo "done"
+        echo "Deployment to dev completed"
       }
+    }
+
+  }
+
+  post {
+    success {
+      echo "Pipeline completed successfully"
+    }
+    failure {
+      echo "Pipeline failed, check logs!"
     }
   }
 }
