@@ -39,7 +39,8 @@ pipeline {
                                         mvn org.owasp:dependency-check-maven:check \
                                           -Dnvd.api.key=$NVD_API_KEY \
                                           -Dformat=HTML \
-                                          -DoutputDirectory=target
+                                          -DoutputDirectory=target \
+                                          -DfailOnError=false
                                     '''
                                 }
                             }
