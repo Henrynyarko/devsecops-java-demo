@@ -32,7 +32,6 @@ pipeline {
                     steps {
                         container('maven') {
                             catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                                // Inject NVD_API_KEY inside container
                                 withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
                                     sh '''
                                         echo "Using NVD API Key: $NVD_API_KEY"
@@ -46,21 +45,6 @@ pipeline {
                             }
                         }
                     }
-
-                    stage('OSS License Checker') {
-                        steps {
-                            container('licensefinder') {
-                                sh 'ls -al'
-                                sh '''#!/bin/bash --login
-                                    /bin/bash --login
-                                    rvm use default
-                                    gem install license_finder
-                                    license_finder
-                                '''
-                            }
-                        }
-                    }
-
                     post {
                         always {
                             archiveArtifacts(
@@ -68,6 +52,20 @@ pipeline {
                                 artifacts: 'target/dependency-check-report.html',
                                 fingerprint: true
                             )
+                        }
+                    }
+                }
+
+                stage('OSS License Checker') {
+                    steps {
+                        container('licensefinder') {
+                            sh 'ls -al'
+                            sh '''#!/bin/bash --login
+                                /bin/bash --login
+                                rvm use default
+                                gem install license_finder
+                                license_finder
+                            '''
                         }
                     }
                 }
