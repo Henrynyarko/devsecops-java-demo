@@ -1,0 +1,65 @@
+controller:
+  serviceType: NodePort
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+
+  env:
+    - name: JAVA_OPTS
+      value: "-Xms512m -Xmx1024m"
+
+  startupProbe:
+    httpGet:
+      path: /login
+      port: 8080
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 60
+
+  readinessProbe:
+    httpGet:
+      path: /login
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+  livenessProbe:
+    httpGet:
+      path: /login
+      port: 8080
+    initialDelaySeconds: 300
+    periodSeconds: 10
+
+  image:
+    tag: "2.537"
+
+  initContainers:
+    - name: init
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "512Mi"
+        limits:
+          cpu: "500m"
+          memory: "768Mi"
+
+  sidecars:
+    configAutoReload:
+      enabled: true
+      image:
+        registry: docker.io
+        repository: kiwigrid/k8s-sidecar
+        tag: 1.30.7
+      imagePullPolicy: IfNotPresent
+      env:
+        - name: REQ_RETRY_CONNECT
+          value: "30"
+        - name: REQ_SLEEP
+          value: "10"
+
