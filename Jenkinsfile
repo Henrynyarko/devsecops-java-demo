@@ -32,7 +32,12 @@ pipeline {
                     steps {
                         container('maven') {
                             catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                                withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                                withCredentials([
+                                    string(
+                                        credentialsId: 'nvd-api-key',
+                                        variable: 'NVD_API_KEY'
+                                    )
+                                ]) {
                                     sh '''
                                         echo "Using NVD API Key: $NVD_API_KEY"
                                         mvn org.owasp:dependency-check-maven:check \
@@ -76,6 +81,24 @@ pipeline {
             steps {
                 container('maven') {
                     sh 'mvn package -DskipTests'
+                }
+            }
+        }
+
+        stage('SAST') {
+            steps {
+                container('slscan') {
+                    sh 'scan --type java,depscan --build'
+                }
+            }
+            post {
+                success {
+                    archiveArtifacts(
+                        allowEmptyArchive: true,
+                        artifacts: 'reports/*',
+                        fingerprint: true,
+                        onlyIfSuccessful: true
+                    )
                 }
             }
         }

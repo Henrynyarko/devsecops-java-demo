@@ -13,33 +13,46 @@ spec:
       volumeMounts:
         - name: m2
           mountPath: /root/.m2/
+
     - name: docker-tools
       image: rmkanda/docker-tools:latest
       command:
         - cat
       tty: true
       volumeMounts:
-        - mountPath: /var/run
-          name: docker-sock
-        - mountPath: /tmp/trivycache/
-          name: trivycache
+        - name: docker-sock
+          mountPath: /var/run
+        - name: trivycache
+          mountPath: /tmp/trivycache/
+
+    - name: slscan
+      image: shiftleft/sast-scan
+      imagePullPolicy: Always
+      command:
+        - cat
+      tty: true
+
     - name: trufflehog
       image: rmkanda/trufflehog
       command:
         - cat
       tty: true
+
     - name: licensefinder
       image: licensefinder/license_finder
       command:
         - cat
       tty: true
+
   volumes:
     - name: m2
       hostPath:
         path: /tmp/.m2/
+
     - name: docker-sock
       hostPath:
         path: /var/run
+
     - name: trivycache
       hostPath:
         path: /tmp/trivycache/
