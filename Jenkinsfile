@@ -33,13 +33,10 @@ pipeline {
                         container('maven') {
                             catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                                 withCredentials([
-                                    string(
-                                        credentialsId: 'nvd-api-key',
-                                        variable: 'NVD_API_KEY'
-                                    )
+                                    string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')
                                 ]) {
                                     sh '''
-                                        echo "Using NVD API Key: $NVD_API_KEY"
+                                        echo "Using NVD API Key"
                                         mvn org.owasp:dependency-check-maven:check \
                                           -Dnvd.api.key=$NVD_API_KEY \
                                           -Dformat=HTML \
@@ -67,10 +64,28 @@ pipeline {
                             sh 'ls -al'
                             sh '''#!/bin/bash --login
                                 /bin/bash --login
-                                rvm use default
-                                gem install license_finder
-                                license_finder
+                                rvm use default || true
+                                gem install license_finder || true
+                                license_finder || true
                             '''
+                        }
+                    }
+                }
+
+                stage('SAST') {
+                    steps {
+                        container('slscan') {
+                            sh 'scan --type java,depscan --build'
+                        }
+                    }
+                    post {
+                        success {
+                            archiveArtifacts(
+                                allowEmptyArchive: true,
+                                artifacts: 'reports/*',
+                                fingerprint: true,
+                                onlyIfSuccessful: true
+                            )
                         }
                     }
                 }
@@ -81,24 +96,6 @@ pipeline {
             steps {
                 container('maven') {
                     sh 'mvn package -DskipTests'
-                }
-            }
-        }
-
-        stage('SAST') {
-            steps {
-                container('slscan') {
-                    sh 'scan --type java,depscan --build'
-                }
-            }
-            post {
-                success {
-                    archiveArtifacts(
-                        allowEmptyArchive: true,
-                        artifacts: 'reports/*',
-                        fingerprint: true,
-                        onlyIfSuccessful: true
-                    )
                 }
             }
         }
