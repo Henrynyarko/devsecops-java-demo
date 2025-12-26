@@ -22,9 +22,6 @@ podTemplate:
     containers:
       - name: maven
         image: maven:alpine
-        command:
-          - cat
-        tty: true
         resources:
           requests:
             cpu: "1"
@@ -38,9 +35,6 @@ podTemplate:
 
       - name: docker-tools
         image: rmkanda/docker-tools:latest
-        command:
-          - cat
-        tty: true
         resources:
           requests:
             cpu: "500m"
@@ -57,9 +51,6 @@ podTemplate:
       - name: slscan
         image: shiftleft/sast-scan
         imagePullPolicy: Always
-        command:
-          - cat
-        tty: true
         resources:
           requests:
             cpu: "500m"
@@ -70,9 +61,6 @@ podTemplate:
 
       - name: trufflehog
         image: rmkanda/trufflehog
-        command:
-          - cat
-        tty: true
         resources:
           requests:
             cpu: "300m"
@@ -83,9 +71,6 @@ podTemplate:
 
       - name: licensefinder
         image: licensefinder/license_finder
-        command:
-          - cat
-        tty: true
         resources:
           requests:
             cpu: "300m"
@@ -97,6 +82,7 @@ podTemplate:
       - name: jnlp
         image: jenkins/inbound-agent:latest
         imagePullPolicy: Always
+        tty: true
         env:
           - name: JENKINS_USER
             valueFrom:
@@ -121,7 +107,6 @@ podTemplate:
           limits:
             cpu: "1"
             memory: "1Gi"
-        tty: true
         args: ["-url", "$(JENKINS_URL)", "-credentials", "$(JENKINS_USER):$(JENKINS_PASSWORD)", "$(JENKINS_AGENT_NAME)"]
 
     volumes:
