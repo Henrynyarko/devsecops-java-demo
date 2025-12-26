@@ -79,6 +79,31 @@ spec:
           cpu: "1"
           memory: "1Gi"
 
+    - name: jnlp
+      image: jenkins/inbound-agent:latest
+      imagePullPolicy: Always
+      env:
+        - name: JENKINS_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-agent
+              key: jenkins-secret
+        - name: JENKINS_AGENT_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: JENKINS_URL
+          value: http://jenkins.ci.svc.cluster.local:8080/
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
+        limits:
+          cpu: "1"
+          memory: "1Gi"
+      tty: true
+      args: ["-url", "$(JENKINS_URL)", "$(JENKINS_SECRET)", "$(JENKINS_AGENT_NAME)"]
+
   volumes:
     - name: m2
       hostPath:
@@ -91,3 +116,23 @@ spec:
     - name: trivycache
       hostPath:
         path: /tmp/trivycache/
+
+    - name: workspace-volume
+      emptyDir: {}
+
+    - name: kube-api-access
+      projected:
+        sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: 3600
+          - configMap:
+              name: kube-root-ca.crt
+              items:
+                - key: ca.crt
+                  path: ca.crt
+          - downwardAPI:
+              items:
+                - path: namespace
+                  fieldRef:
+                    fieldPath: metadata.namespace
