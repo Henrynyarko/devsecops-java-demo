@@ -18,79 +18,50 @@ pipeline {
         }
 
         stage('Static Analysis') {
-            parallel {
-
-                stage('Unit Tests') {
-                    steps {
-                        container('maven') {
-                            sh 'mvn test'
-                        }
+            parallel(
+                "Unit Tests": {
+                    container('maven') {
+                        sh 'mvn test'
                     }
-                }
-
-                stage('SCA') {
-                    steps {
-                        container('maven') {
-                            catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                                withCredentials([
-                                    string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')
-                                ]) {
-                                    sh '''
-                                        echo "Using NVD API Key"
-                                        mvn org.owasp:dependency-check-maven:check \
-                                          -Dnvd.api.key=$NVD_API_KEY \
-                                          -Dformat=HTML \
-                                          -DoutputDirectory=target \
-                                          -DfailOnError=false
-                                    '''
-                                }
+                },
+                "SCA": {
+                    container('maven') {
+                        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                            withCredentials([
+                                string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')
+                            ]) {
+                                sh '''
+                                    echo "Using NVD API Key"
+                                    mvn org.owasp:dependency-check-maven:check \
+                                      -Dnvd.api.key=$NVD_API_KEY \
+                                      -Dformat=HTML \
+                                      -DoutputDirectory=target \
+                                      -DfailOnError=false
+                                '''
                             }
                         }
+                        // Archive report even if scan fails
+                        archiveArtifacts(
+                            allowEmptyArchive: true,
+                            artifacts: 'target/dependency-check-report.html',
+                            fingerprint: true
+                        )
                     }
-                    post {
-                        always {
-                            archiveArtifacts(
-                                allowEmptyArchive: true,
-                                artifacts: 'target/dependency-check-report.html',
-                                fingerprint: true
-                            )
-                        }
-                    }
-                }
-
-                stage('OSS License Checker') {
-                    steps {
-                        container('licensefinder') {
-                            sh 'ls -al'
-                            sh '''#!/bin/bash --login
-                                /bin/bash --login
-                                rvm use default || true
-                                gem install license_finder || true
-                                license_finder || true
-                            '''
-                        }
+                },
+                "OSS License Checker": {
+                    container('licensefinder') {
+                        sh 'ls -al'
+                        sh '''#!/bin/bash --login
+                            /bin/bash --login
+                            rvm use default || true
+                            gem install license_finder || true
+                            license_finder || true
+                        '''
                     }
                 }
-
-        //         stage('SASTs') {
-        //             steps {
-        //                 container('slscan') {
-        //                     sh 'scan --type java,depscan --build'
-        //                 }
-        //             }
-        //             post {
-        //                 success {
-        //                     archiveArtifacts(
-        //                         allowEmptyArchive: true,
-        //                         artifacts: 'reports/*',
-        //                         fingerprint: true,
-        //                         onlyIfSuccessful: true
-        //                     )
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+                // Add SASTs as another parallel branch if needed
+            )
+        }
 
         stage('Package') {
             steps {
