@@ -1,4 +1,9 @@
 pipeline {
+
+    environment {
+        ARGO_SERVER = '34.122.47.13:32100'
+    }
+
     agent {
         kubernetes {
             yamlFile 'build-agent.yaml'
@@ -32,10 +37,14 @@ pipeline {
                     steps {
                         container('maven') {
                             catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                                // Inject NVD_API_KEY inside container
-                                withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                                withCredentials([
+                                    string(
+                                        credentialsId: 'nvd-api-key',
+                                        variable: 'NVD_API_KEY'
+                                    )
+                                ]) {
                                     sh '''
-                                        echo "Using NVD API Key: $NVD_API_KEY"
+                                        echo "Using NVD API Key"
                                         mvn org.owasp:dependency-check-maven:check \
                                           -Dnvd.api.key=$NVD_API_KEY \
                                           -Dformat=HTML \
@@ -91,8 +100,30 @@ pipeline {
         */
 
         stage('Deploy to Dev Environment') {
+            environment {
+                AUTH_TOKEN = credentials('argocd-jenkins-deployer-token')
+            }
             steps {
-                echo "Deployment to Dev completed"
+                container('docker-tools') {
+
+                    sh '''
+                        docker run -t schoolofdevops/argocd-cli \
+                          argocd app sync dso-demo \
+                          --insecure \
+                          --server $ARGO_SERVER \
+                          --auth-token $AUTH_TOKEN
+                    '''
+
+                    sh '''
+                        docker run -t schoolofdevops/argocd-cli \
+                          argocd app wait dso-demo \
+                          --health \
+                          --timeout 300 \
+                          --insecure \
+                          --server $ARGO_SERVER \
+                          --auth-token $AUTH_TOKEN
+                    '''
+                }
             }
         }
     }
